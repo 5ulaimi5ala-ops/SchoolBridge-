@@ -4,7 +4,18 @@ import { Send, Bot, User, Sparkles, X, MessageSquare, Volume2, HelpCircle } from
 import { useData } from '../DataContext';
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+const getAI = () => {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === 'undefined') {
+      console.warn("Gemini API Key is missing. AI Chat will be disabled.");
+      return null;
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+};
 
 export const AIChatBuddy: React.FC = () => {
   const { currentUser, saveChat, awardPoints } = useData();
@@ -29,7 +40,12 @@ export const AIChatBuddy: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await ai.models.generateContent({
+      const modelClient = getAI();
+      if (!modelClient) {
+        throw new Error("AI Assistant is currently unavailable.");
+      }
+
+      const response = await modelClient.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: input,
         config: {
