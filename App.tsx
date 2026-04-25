@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Role, Student, Language, User } from './types';
+import { Role, Student, Language, User, Notification } from './types';
 import { TRANSLATIONS } from './constants';
 import { BottomNav, Bridge, SimulatedGmailNotification } from './components/Shared';
 import { StudentDashboard, ProgressDetail, HelpRequest, AICompanion, FocusMode, StudyPlanView, PeerMatching, PrivateChat } from './screens/StudentScreens';
@@ -34,6 +34,7 @@ const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<string>('dashboard');
   const [activeTab, setActiveTab] = useState<string>('home');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  
   const [onboardForm, setOnboardForm] = useState({ name: '', studentEmail: '' });
   const [error, setError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -67,7 +68,7 @@ const App: React.FC = () => {
   const navigateTo = (screen: string, data?: any) => {
     setCurrentScreen(screen);
     if (data) setSelectedStudent(data);
-    window.scrollTo(0,0);
+    window.scrollTo(0, 0);
   };
 
   const handleTabChange = (tabId: string) => {
@@ -86,7 +87,7 @@ const App: React.FC = () => {
     }
     if (tabId === 'alerts') {
       setCurrentScreen('dashboard');
-      clearNotificationsByType('general');
+      clearNotificationsByType('alert');
     }
   };
 
@@ -96,8 +97,8 @@ const App: React.FC = () => {
     try {
       await signInWithGoogle();
     } catch (err: any) {
-      console.error("Google Auth Error:", err);
-      setError(language === 'ar' ? 'فشل تسجيل الدخول باستخدام Google.' : 'Google Sign-In failed.');
+      console.error("Auth Error:", err);
+      setError(language === 'ar' ? 'فشل تسجيل الدخول. حاول مرة أخرى.' : 'Login failed. Please try again.');
     } finally {
       setAuthLoading(false);
     }
@@ -381,7 +382,7 @@ const App: React.FC = () => {
           activeTab={activeTab} 
           onChange={handleTabChange} 
           items={[
-            { id: 'home', label: t.home, icon: navIcons.home, badgeCount: getUnreadCount('invite') + getUnreadCount('general') },
+            { id: 'home', label: t.home, icon: navIcons.home, badgeCount: getUnreadCount('invite') + getUnreadCount('alert') },
             { id: 'progress', label: t.progress, icon: navIcons.progress },
             { id: 'help', label: t.help, icon: navIcons.help },
             { id: 'messages', label: t.chat, icon: navIcons.messages, badgeCount: getUnreadCount('message') },
@@ -396,7 +397,7 @@ const App: React.FC = () => {
             { id: 'home', label: t.class, icon: navIcons.home, badgeCount: getUnreadCount('help') },
             { id: 'students', label: t.students, icon: navIcons.students },
             { id: 'messages', label: t.chat, icon: navIcons.messages, badgeCount: getUnreadCount('message') },
-            { id: 'alerts', label: t.alerts, icon: navIcons.alerts, badgeCount: getUnreadCount('general') },
+            { id: 'alerts', label: t.alerts, icon: navIcons.alerts, badgeCount: getUnreadCount('alert') },
           ]}
         />
       )}

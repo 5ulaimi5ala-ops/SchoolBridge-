@@ -22,6 +22,7 @@ export const OMANI_SUBJECTS = [
 export const MOCK_STUDENTS: Student[] = [
   {
     id: '1',
+    email: 'ahmed@sb.local',
     name: 'Ahmed Al-Said',
     grade: '10th',
     riskLevel: 'high',
@@ -60,6 +61,7 @@ export const MOCK_STUDENTS: Student[] = [
   },
   {
     id: '2',
+    email: 'fatima@sb.local',
     name: 'Fatima Al-Balushi',
     grade: '10th',
     riskLevel: 'medium',
@@ -87,6 +89,7 @@ export const MOCK_STUDENTS: Student[] = [
   },
   {
     id: '3',
+    email: 'salim@sb.local',
     name: 'Salim Al-Harthy',
     grade: '10th',
     riskLevel: 'low',

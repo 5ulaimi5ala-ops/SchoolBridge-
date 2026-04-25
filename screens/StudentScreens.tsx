@@ -606,6 +606,7 @@ export const FocusMode: React.FC<Props> = ({ onNavigate, language }) => {
 
 export const StudyPlanView: React.FC<Props> = ({ student, onNavigate, language }) => {
   const { showToast, ToastComponent } = useToast();
+  const { updateStudent } = useData();
   const t = TRANSLATIONS[language];
   const plan = student.studyPlan;
 
