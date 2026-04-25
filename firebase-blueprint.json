@@ -1,0 +1,171 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and authentication data",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "teacher", "parent"] },
+        "avatar": { "type": "string" },
+        "bio": { "type": "string" },
+        "classId": { "type": "string" },
+        "studentEmail": { "type": "string" },
+        "onboarded": { "type": "boolean" }
+      },
+      "required": ["name", "email", "role"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student academic and behavioral data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "grade": { "type": "string" },
+        "riskLevel": { "type": "string", "enum": ["low", "medium", "high"] },
+        "issueSummary": { "type": "string" },
+        "attendance": { "type": "number" },
+        "missingTasks": { "type": "array", "items": { "type": "string" } },
+        "recentScores": { "type": "array", "items": { "type": "number" } },
+        "subjects": { "type": "array", "items": { "$ref": "#/entities/Subject" } },
+        "points": { "type": "number" },
+        "level": { "type": "number" },
+        "badges": { "type": "array", "items": { "$ref": "#/entities/Badge" } },
+        "currentMood": { "type": "string", "enum": ["happy", "neutral", "sad", "stressed"] },
+        "moodHistory": { "type": "array", "items": { "type": "object", "properties": { "date": { "type": "string" }, "mood": { "type": "string" } } } },
+        "strengths": { "type": "array", "items": { "type": "string" } },
+        "weaknesses": { "type": "array", "items": { "type": "string" } },
+        "isPeerMentor": { "type": "boolean" },
+        "studyPlan": { "$ref": "#/entities/StudyPlan" },
+        "internalNotes": { "type": "array", "items": { "$ref": "#/entities/TeacherNote" } }
+      },
+      "required": ["name", "email", "grade", "riskLevel"]
+    },
+    "TeacherNote": {
+      "title": "TeacherNote",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "text": { "type": "string" },
+        "category": { "type": "string", "enum": ["academic", "behavioral", "emotional"] }
+      }
+    },
+    "Subject": {
+      "title": "Subject",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "progress": { "type": "number" },
+        "score": { "type": "number" },
+        "risk": { "type": "string" },
+        "lastImprovement": { "type": "number" }
+      }
+    },
+    "Badge": {
+      "title": "Badge",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "icon": { "type": "string" },
+        "description": { "type": "string" },
+        "unlockedAt": { "type": "string" }
+      }
+    },
+    "StudyPlan": {
+      "title": "StudyPlan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "tasks": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" }, "title": { "type": "string" }, "type": { "type": "string" }, "completed": { "type": "boolean" }, "duration": { "type": "string" } } } }
+      }
+    },
+    "Class": {
+      "title": "Class",
+      "description": "Classroom data and memberships",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "subjects": { "type": "array", "items": { "type": "string" } },
+        "students": { "type": "array", "items": { "type": "object", "properties": { "email": { "type": "string" }, "userId": { "type": "string" } } } },
+        "parents": { "type": "array", "items": { "type": "object", "properties": { "email": { "type": "string" }, "studentEmail": { "type": "string" }, "userId": { "type": "string" } } } }
+      },
+      "required": ["name", "teacherId"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Direct message between users",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "isRead": { "type": "boolean" }
+      },
+      "required": ["senderId", "receiverId", "text", "timestamp"]
+    },
+    "HelpRequest": {
+      "title": "HelpRequest",
+      "description": "Student request for assistance",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "isAnonymous": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["pending", "resolved"] }
+      },
+      "required": ["studentId", "subject", "message", "timestamp", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "In-app alerts and notifications",
+      "type": "object",
+      "properties": {
+        "to": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "read": { "type": "boolean" },
+        "payload": { "type": "object" }
+      },
+      "required": ["to", "title", "message", "type", "timestamp", "read"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles indexed by UID"
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Student data objects"
+    },
+    "/classes/{classId}": {
+      "schema": "Class",
+      "description": "Classroom collections"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Direct messages"
+    },
+    "/helpRequests/{requestId}": {
+      "schema": "HelpRequest",
+      "description": "Student help requests"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    }
+  }
+}

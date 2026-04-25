@@ -3,6 +3,7 @@ import React from 'react';
 import { Card, Header, Badge, ProgressBar, useToast } from '../components/Shared';
 import { Student, Language } from '../types';
 import { PARENT_TIPS, TRANSLATIONS } from '../constants';
+import { useData } from '../DataContext';
 import { Star, Award, Smile, Meh, Frown, AlertTriangle, MessageCircle, Lightbulb, TrendingUp, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -14,6 +15,7 @@ interface Props {
 
 export const ParentDashboard: React.FC<Props> = ({ student, onNavigate, language }) => {
   const { showToast, ToastComponent } = useToast();
+  const { currentUser } = useData();
   const t = TRANSLATIONS[language];
   const moodIcons = {
     happy: { icon: <Smile className="w-6 h-6 text-emerald-500" />, label: language === 'ar' ? 'ممتاز' : 'Great', color: 'bg-emerald-50' },
@@ -27,7 +29,7 @@ export const ParentDashboard: React.FC<Props> = ({ student, onNavigate, language
       <Header 
         title={language === 'ar' ? `مرحباً، ولي أمر ${student.name.split(' ')[0]}` : `Hello, Mr./Ms. ${student.name.split(' ')[1]}`} 
         subtitle={language === 'ar' ? `بوابة ولي الأمر: ${student.name}` : `Parent Portal: ${student.name}`}
-        avatar="https://api.dicebear.com/7.x/initials/svg?seed=Parent"
+        avatar={currentUser?.avatar || "https://api.dicebear.com/7.x/initials/svg?seed=Parent"}
       />
 
       {/* Student Stats Summary */}

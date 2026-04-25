@@ -107,7 +107,7 @@ export const Header: React.FC<{ title: string; subtitle?: string; avatar?: strin
   </div>
 );
 
-export const BottomNav: React.FC<{ activeTab: string; onChange: (tab: string) => void; items: { id: string; label: string; icon: React.ReactNode }[] }> = ({ activeTab, onChange, items }) => (
+export const BottomNav: React.FC<{ activeTab: string; onChange: (tab: string) => void; items: { id: string; label: string; icon: React.ReactNode; badgeCount?: number }[] }> = ({ activeTab, onChange, items }) => (
   <div className="fixed bottom-6 left-6 right-6 bg-white/80 backdrop-blur-xl border border-white/20 px-4 py-3 flex justify-around rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] z-50">
     {items.map((item) => (
       <button
@@ -122,8 +122,13 @@ export const BottomNav: React.FC<{ activeTab: string; onChange: (tab: string) =>
             transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
           />
         )}
-        <div className={`transition-transform duration-300 ${activeTab === item.id ? 'scale-110' : ''}`}>
+        <div className={`transition-transform duration-300 relative ${activeTab === item.id ? 'scale-110' : ''}`}>
           {item.icon}
+          {item.badgeCount !== undefined && item.badgeCount > 0 && (
+            <span className="absolute -top-1 -right-2 w-4 h-4 bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm animate-bounce">
+              {item.badgeCount}
+            </span>
+          )}
         </div>
         <span className="text-[10px] font-black uppercase tracking-tighter">{item.label}</span>
       </button>
@@ -135,8 +140,9 @@ export const SimulatedGmailNotification: React.FC<{
   title: string; 
   message: string; 
   onClose: () => void;
+  onOpen: () => void;
   language?: string;
-}> = ({ title, message, onClose, language = 'en' }) => {
+}> = ({ title, message, onClose, onOpen, language = 'en' }) => {
   return (
     <motion.div
       initial={{ x: 300, opacity: 0 }}
@@ -161,7 +167,7 @@ export const SimulatedGmailNotification: React.FC<{
           <h4 className="text-xs font-black text-slate-800 truncate mb-0.5">{title}</h4>
           <p className="text-[11px] text-slate-500 leading-snug line-clamp-2 mb-2">{message}</p>
           <div className="flex gap-2">
-            <button onClick={onClose} className="px-3 py-1 bg-red-50 text-red-600 text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">
+            <button onClick={onOpen} className="px-3 py-1 bg-red-50 text-red-600 text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">
               {language === 'ar' ? 'فتح' : 'Open'}
             </button>
             <button onClick={onClose} className="px-3 py-1 bg-slate-50 text-slate-500 text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-slate-200 transition-all">

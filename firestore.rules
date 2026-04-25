@@ -1,0 +1,132 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // --- Helpers ---
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isTeacher() {
+      return isSignedIn() && getUserData(request.auth.uid).role == 'teacher';
+    }
+
+    function isParentOf(studentEmail) {
+      return isSignedIn() && getUserData(request.auth.uid).role == 'parent' && getUserData(request.auth.uid).studentEmail == studentEmail;
+    }
+
+    // --- Validation Helpers ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'role']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.role in ['student', 'teacher', 'parent'] &&
+             (data.get('avatar', '') is string && data.get('avatar', '').size() <= 1048576) && // 1MB for base64
+             (data.get('bio', '') is string && data.get('bio', '').size() <= 1000);
+    }
+
+    function isValidStudent(data) {
+      return data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.grade is string && data.grade.size() <= 50 &&
+             data.riskLevel in ['low', 'medium', 'high'];
+    }
+
+    function isValidMessage(data) {
+      return data.senderId == request.auth.uid &&
+             data.receiverId is string &&
+             data.text is string && data.text.size() <= 5000 &&
+             data.timestamp is string;
+    }
+
+    function isValidHelpRequest(data) {
+      return data.studentId == request.auth.uid &&
+             data.subject is string &&
+             data.message is string && data.message.size() <= 5000 &&
+             data.status in ['pending', 'resolved'];
+    }
+
+    // --- Match Groups ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && (isTeacher() || isOwner(userId) || existing().role == 'teacher');
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'bio', 'onboarded', 'classId'])
+      );
+    }
+
+    match /students/{studentId} {
+      allow get: if isSignedIn() && (
+        isOwner(studentId) || 
+        isTeacher() || 
+        isParentOf(existing().email)
+      );
+      allow list: if isSignedIn() && (isTeacher() || isOwner(studentId) || isParentOf(existing().email));
+      allow create: if isSignedIn() && isValidStudent(incoming());
+      allow update: if isSignedIn() && (
+        (isOwner(studentId) && incoming().diff(existing()).affectedKeys().hasOnly(['currentMood', 'moodHistory', 'studyPlan', 'points', 'level', 'badges'])) ||
+        (isTeacher() && incoming().diff(existing()).affectedKeys().hasOnly(['riskLevel', 'issueSummary', 'attendance', 'missingTasks', 'recentScores', 'subjects', 'strengths', 'weaknesses', 'internalNotes']))
+      );
+    }
+
+    match /classes/{classId} {
+      allow get, list: if isSignedIn();
+      allow create: if isTeacher();
+      allow update: if isTeacher() && existing().teacherId == request.auth.uid;
+    }
+
+    match /messages/{messageId} {
+      allow read: if isSignedIn() && (existing().senderId == request.auth.uid || existing().receiverId == request.auth.uid);
+      allow create: if isSignedIn() && isValidMessage(incoming());
+      allow delete: if false;
+    }
+
+    match /helpRequests/{requestId} {
+      allow read: if isSignedIn() && (existing().studentId == request.auth.uid || isTeacher());
+      allow create: if isSignedIn() && isValidHelpRequest(incoming());
+      allow update: if isSignedIn() && (
+        (existing().studentId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['message', 'subject'])) ||
+        (isTeacher() && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+      );
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && existing().to == getUserData(request.auth.uid).email;
+      allow create: if isSignedIn(); // System/Other users can create
+      allow update: if isSignedIn() && existing().to == getUserData(request.auth.uid).email && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+    }
+  }
+}

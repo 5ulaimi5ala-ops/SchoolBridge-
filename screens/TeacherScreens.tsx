@@ -23,7 +23,8 @@ import {
   Star,
   Zap,
   Clock,
-  Plus
+  Plus,
+  CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useData } from '../DataContext';
@@ -35,7 +36,7 @@ interface Props {
 
 export const TeacherDashboard: React.FC<Props> = ({ onNavigate, language }) => {
   const { showToast, ToastComponent } = useToast();
-  const { students, currentUser, classes } = useData();
+  const { students, currentUser, classes, helpRequests, users, resolveHelpRequest } = useData();
   const [activeTab, setActiveTab] = useState<'alerts' | 'struggles' | 'questions'>('alerts');
   const t = TRANSLATIONS[language];
 
@@ -58,17 +59,18 @@ export const TeacherDashboard: React.FC<Props> = ({ onNavigate, language }) => {
   // Emotional Alerts
   const emotionalAlerts = classStudents.filter(s => s.currentMood === 'stressed' || s.currentMood === 'sad');
 
-  const anonymousQuestions = [
-    { id: 'q1', text: language === 'ar' ? "لا أفهم كيفية تطبيق قاعدة السلسلة في المعادلات المعقدة." : "I don't understand how to apply the chain rule in complex equations.", timestamp: language === 'ar' ? 'منذ 10 دقائق' : '10m ago' },
-    { id: 'q2', text: language === 'ar' ? "هل سيتضمن الاختبار القادم التكامل بالأجزاء؟" : "Will the next test include integration by parts?", timestamp: language === 'ar' ? 'منذ ساعة' : '1h ago' },
-  ];
+  // Get actual help requests for this teacher's class
+  const classHelpRequests = helpRequests.filter(req => {
+    const studentUser = users.find(u => u.id === req.studentId);
+    return studentUser?.classId === currentUser?.classId && req.status === 'pending';
+  });
 
   return (
     <div className="pb-24 space-y-6">
       <Header 
         title={language === 'ar' ? 'نظرة عامة على الفصل' : "Class Overview"} 
         subtitle={currentClass?.name || (language === 'ar' ? 'بناء فصل جديد' : "Building new class")} 
-        avatar="https://api.dicebear.com/7.x/micah/svg?seed=teacher" 
+        avatar={currentUser?.avatar || "https://api.dicebear.com/7.x/micah/svg?seed=teacher"} 
       />
       
       <div className="grid grid-cols-3 gap-3">
@@ -227,40 +229,61 @@ export const TeacherDashboard: React.FC<Props> = ({ onNavigate, language }) => {
           >
             <section>
               <div className="flex items-center justify-between mb-4 px-1">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'لوحة اسأل بدون خوف' : 'Ask Without Fear Board'}</h3>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'لوحة المساعدة والأسئلة' : 'Help & Questions Board'}</h3>
                 <EyeOff className="w-4 h-4 text-slate-400" />
               </div>
               <div className="space-y-4">
-                {anonymousQuestions.map(q => (
-                  <Card key={q.id} className="p-5 bg-slate-50 border-dashed border-2 border-slate-200 hover:bg-white hover:border-blue-200 transition-all">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm border border-slate-100">
-                        <UserX className="w-5 h-5 text-slate-400" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'طالب مجهول' : 'Anonymous Student'}</span>
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{q.timestamp}</span>
+                {classHelpRequests.length === 0 && (
+                  <div className="text-center py-20 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
+                    <CheckCircle2 className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                    <p className="text-slate-400 font-bold text-sm">{language === 'ar' ? 'لا يوجد طلبات مساعدة حالياً' : 'No pending help requests'}</p>
+                  </div>
+                )}
+                {classHelpRequests.map(q => {
+                  const studentUser = users.find(u => u.id === q.studentId);
+                  return (
+                    <Card key={q.id} className="p-5 bg-slate-50 border-dashed border-2 border-slate-200 hover:bg-white hover:border-blue-200 transition-all">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm border border-slate-100">
+                          {q.isAnonymous ? <UserX className="w-5 h-5 text-slate-400" /> : <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${studentUser?.name}`} className="w-8 h-8 rounded-lg" />}
                         </div>
-                        <p className="text-sm text-slate-700 leading-relaxed font-medium">{q.text}</p>
-                        <div className="mt-4 flex gap-2">
-                          <button 
-                            onClick={() => showToast(language === 'ar' ? 'تم إرسال الرد الخاص' : 'Private answer sent')}
-                            className="text-[10px] font-black text-blue-600 bg-white border border-blue-100 px-4 py-2 rounded-xl shadow-sm hover:bg-blue-600 hover:text-white transition-all uppercase tracking-widest"
-                          >
-                            {language === 'ar' ? 'رد خاص' : 'Answer Privately'}
-                          </button>
-                          <button 
-                            onClick={() => showToast(language === 'ar' ? 'تم النشر للفصل' : 'Posted to class')}
-                            className="text-[10px] font-black text-slate-600 bg-white border border-slate-100 px-4 py-2 rounded-xl shadow-sm hover:bg-slate-800 hover:text-white transition-all uppercase tracking-widest"
-                          >
-                            {language === 'ar' ? 'نشر للفصل' : 'Post to Class'}
-                          </button>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center mb-2">
+                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                               {q.isAnonymous ? (language === 'ar' ? 'طالب مجهول' : 'Anonymous Student') : studentUser?.name}
+                             </span>
+                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{q.timestamp}</span>
+                          </div>
+                          <div className="inline-block px-2 py-1 bg-blue-50 text-blue-600 text-[8px] font-black rounded-lg uppercase tracking-widest mb-2">
+                            {q.subject}
+                          </div>
+                          <p className="text-sm text-slate-700 leading-relaxed font-medium">{q.message}</p>
+                          <div className="mt-4 flex gap-2">
+                            <button 
+                              onClick={() => {
+                                if (!q.isAnonymous && studentUser) {
+                                   onNavigate('private_chat', studentUser);
+                                } else {
+                                   showToast(language === 'ar' ? 'تم إرسال الرد العام للفصل' : 'Public response posted to class');
+                                   resolveHelpRequest(q.id);
+                                }
+                              }}
+                              className="text-[10px] font-black text-blue-600 bg-white border border-blue-100 px-4 py-2 rounded-xl shadow-sm hover:bg-blue-600 hover:text-white transition-all uppercase tracking-widest"
+                            >
+                              {q.isAnonymous ? (language === 'ar' ? 'رد عام' : 'Post Answer') : (language === 'ar' ? 'رد خاص' : 'Answer Privately')}
+                            </button>
+                            <button 
+                              onClick={() => resolveHelpRequest(q.id)}
+                              className="text-[10px] font-black text-slate-600 bg-white border border-slate-100 px-4 py-2 rounded-xl shadow-sm hover:bg-slate-800 hover:text-white transition-all uppercase tracking-widest"
+                            >
+                              {language === 'ar' ? 'تحديد كمكتمل' : 'Mark Resolved'}
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             </section>
           </motion.div>
@@ -271,28 +294,52 @@ export const TeacherDashboard: React.FC<Props> = ({ onNavigate, language }) => {
   );
 };
 
-export const TeacherStudentDetail: React.FC<{ student: Student; onNavigate: (screen: string) => void; language: Language }> = ({ student, onNavigate, language }) => {
+export const TeacherStudentDetail: React.FC<{ student: Student; onNavigate: (screen: string, data?: any) => void; language: Language }> = ({ student, onNavigate, language }) => {
   const { showToast, ToastComponent } = useToast();
-  const { updateStudent } = useData();
+  const { updateStudent, users } = useData();
   const t = TRANSLATIONS[language];
   const [newGrade, setNewGrade] = useState('');
   const [newAssignment, setNewAssignment] = useState('');
+  const [internalNote, setInternalNote] = useState('');
+
+  const studentUser = users.find(u => u.email === student.id || u.id === student.id);
+  const parentUser = users.find(u => {
+    const sEmail = studentUser?.email || student.id;
+    return u.role === 'parent' && u.studentEmail === sEmail;
+  });
   
-  const handleAddGrade = () => {
+  const handleAddGrade = async () => {
     if (!newGrade) return;
     const score = parseInt(newGrade);
-    const updated = { ...student, recentScores: [...student.recentScores, score] };
-    updateStudent(updated);
+    const updated = { ...student, recentScores: [...(student.recentScores || []), score] };
+    await updateStudent(updated);
     setNewGrade('');
     showToast(language === 'ar' ? 'تمت إضافة الدرجة' : 'Grade Added Successfully');
   };
 
-  const handleAddAssignment = () => {
+  const handleAddAssignment = async () => {
     if (!newAssignment) return;
-    const updated = { ...student, missingTasks: [...student.missingTasks, newAssignment] };
-    updateStudent(updated);
+    const updated = { ...student, missingTasks: [...(student.missingTasks || []), newAssignment] };
+    await updateStudent(updated);
     setNewAssignment('');
     showToast(language === 'ar' ? 'تم إسناد المهمة' : 'Assignment Assigned');
+  };
+
+  const handleSaveNote = async () => {
+    if (!internalNote) return;
+    const note: any = {
+      id: Math.random().toString(36).substr(2, 9),
+      date: new Date().toLocaleDateString(),
+      text: internalNote,
+      category: 'academic'
+    };
+    const updated = { 
+      ...student, 
+      internalNotes: [...(student.internalNotes || []), note] 
+    };
+    await updateStudent(updated);
+    setInternalNote('');
+    showToast(language === 'ar' ? 'تم حفظ الملاحظة بنجاح' : 'Note saved successfully');
   };
 
   return (
@@ -414,7 +461,13 @@ export const TeacherStudentDetail: React.FC<{ student: Student; onNavigate: (scr
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-1">{language === 'ar' ? 'إجراءات سريعة' : 'Quick Actions'}</h3>
           <div className="grid grid-cols-2 gap-4">
             <button 
-              onClick={() => showToast(language === 'ar' ? 'بدء المحادثة مع الطالب...' : 'Starting chat with student...')}
+              onClick={() => {
+                if (studentUser) {
+                  onNavigate('private_chat', studentUser);
+                } else {
+                  showToast(language === 'ar' ? 'المستخدم غير موجود' : 'User profile not found');
+                }
+              }}
               className="bg-blue-600 text-white py-5 rounded-2xl text-xs font-black active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200 uppercase tracking-widest"
             >
               <MessageCircle className="w-5 h-5" />
@@ -435,12 +488,32 @@ export const TeacherStudentDetail: React.FC<{ student: Student; onNavigate: (scr
               {language === 'ar' ? 'عرض السجل' : 'View History'}
             </button>
             <button 
-              onClick={() => showToast(language === 'ar' ? 'تم إرسال دعوة اجتماع لولي الأمر' : 'Meeting invite sent to parent')}
+              onClick={() => {
+                if (parentUser) {
+                   onNavigate('private_chat', parentUser);
+                } else {
+                   showToast(language === 'ar' ? 'لم يتم العثور على ولي أمر مرتبط' : 'No linked parent profile found');
+                }
+              }}
               className="bg-white text-slate-700 py-5 rounded-2xl text-xs font-black active:scale-95 transition-all border border-slate-100 shadow-sm uppercase tracking-widest flex items-center justify-center gap-2"
             >
               <MessageSquare className="w-5 h-5 text-slate-400" />
-              {language === 'ar' ? 'مراسلة ولي الأمر' : 'Email Parent'}
+              {language === 'ar' ? 'مراسلة ولي الأمر' : 'Message Parent'}
             </button>
+          </div>
+        </section>
+
+        <section>
+          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-1">{language === 'ar' ? 'الملاحظات السابقة' : 'Previous Notes'}</h3>
+          <div className="space-y-3">
+            {student.internalNotes?.map((note) => (
+              <Card key={note.id} className="p-4 bg-slate-50 border-none">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{note.date}</span>
+                </div>
+                <p className="text-xs font-medium text-slate-700">{note.text}</p>
+              </Card>
+            ))}
           </div>
         </section>
 
@@ -448,12 +521,14 @@ export const TeacherStudentDetail: React.FC<{ student: Student; onNavigate: (scr
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-1">{language === 'ar' ? 'إضافة ملاحظة داخلية' : 'Add Internal Note'}</h3>
           <Card className="p-2">
             <textarea 
+              value={internalNote}
+              onChange={(e) => setInternalNote(e.target.value)}
               placeholder={language === 'ar' ? "لوحظ أن أحمد يواجه صعوبة في أساسيات التكامل..." : "Observed Alex struggling with integration basics during lab..."}
               className="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] p-5 text-sm h-32 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700 resize-none"
             />
           </Card>
           <button 
-            onClick={() => showToast(language === 'ar' ? 'تم حفظ الملاحظة بنجاح' : 'Note saved successfully')}
+            onClick={handleSaveNote}
             className="mt-4 w-full bg-slate-800 text-white py-5 rounded-2xl text-xs font-black shadow-xl active:scale-95 transition-all uppercase tracking-widest"
           >
             {language === 'ar' ? 'حفظ الملاحظة' : 'Save Note'}

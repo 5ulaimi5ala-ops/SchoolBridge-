@@ -22,9 +22,9 @@ export const TeacherSetup: React.FC<Props> = ({ language }) => {
 
   const t = TRANSLATIONS[language];
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (currentUser && className && selectedSubjects.length > 0) {
-      createClass(currentUser.id, className, selectedSubjects, students.filter(s => s.email.includes('@')));
+      await createClass(currentUser.id, className, selectedSubjects, students.filter(s => s.email.includes('@')));
     }
   };
 

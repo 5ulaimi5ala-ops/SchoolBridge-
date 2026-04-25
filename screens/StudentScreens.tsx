@@ -42,7 +42,7 @@ interface Props {
 
 export const StudentDashboard: React.FC<Props> = ({ student, onNavigate, language }) => {
   const { showToast, ToastComponent } = useToast();
-  const { updateStudent } = useData();
+  const { updateStudent, currentUser } = useData();
   const [showMoodCheck, setShowMoodCheck] = useState(!student.currentMood);
   const t = TRANSLATIONS[language];
 
@@ -64,7 +64,7 @@ export const StudentDashboard: React.FC<Props> = ({ student, onNavigate, languag
       <Header 
         title={language === 'ar' ? `مرحباً، ${student.name.split(' ')[0]} 👋` : `Hi, ${student.name.split(' ')[0]} 👋`} 
         subtitle={language === 'ar' ? "أنت تبلي بلاءً حسناً. استمر!" : "You're doing great. Keep it up!"}
-        avatar={`https://api.dicebear.com/7.x/avataaars/svg?seed=${student.name}`}
+        avatar={currentUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${student.name}`}
       />
 
       {/* Gamification Stats */}
@@ -238,35 +238,41 @@ export const StudentDashboard: React.FC<Props> = ({ student, onNavigate, languag
 
 export const PrivateChat: React.FC<Props> = ({ student, onNavigate, language }) => {
   const { showToast, ToastComponent } = useToast();
-  const { users, currentUser } = useData();
+  const { users, currentUser, messages, sendMessage } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [messages, setMessages] = useState<{ role: 'user' | 'other', text: string, timestamp: string }[]>([]);
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const t = TRANSLATIONS[language];
 
-  // Mock conversation history if a user is selected
+  // Effect to pre-select user if passed from props
   useEffect(() => {
-    if (selectedUser) {
-      setMessages([
-        { role: 'other', text: language === 'ar' ? `مرحباً! أنا ${selectedUser.name}. كيف يمكنني مساعدتك؟` : `Hi! I'm ${selectedUser.name}. How can I help you today?`, timestamp: '09:00 AM' }
-      ]);
-    } else {
-      setMessages([]);
+    if (student) {
+      // Find the user object that matches the student prop (either by ID or email)
+      const targetUser = users.find(u => u.id === student.id || u.email === student.id || u.email === (student as any).email);
+      if (targetUser && targetUser.id !== currentUser?.id) {
+        setSelectedUser(targetUser);
+      }
     }
-  }, [selectedUser, language]);
+  }, [student, users, currentUser]);
+
+  // Filter messages between current user and selected user
+  const chatMessages = messages.filter(m => 
+    selectedUser && (
+      (m.senderId === currentUser?.id && m.receiverId === selectedUser.id) ||
+      (m.senderId === selectedUser.id && m.receiverId === currentUser?.id)
+    )
+  );
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [chatMessages]);
 
   const handleSend = () => {
-    if (!input.trim() || !selectedUser) return;
-    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setMessages(prev => [...prev, { role: 'user', text: input, timestamp: now }]);
+    if (!input.trim() || !selectedUser || !currentUser) return;
+    sendMessage(currentUser.id, selectedUser.id, input);
     setInput('');
   };
 
@@ -353,16 +359,22 @@ export const PrivateChat: React.FC<Props> = ({ student, onNavigate, language }) 
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 custom-scrollbar">
-            {messages.map((m, i) => (
+            {chatMessages.length === 0 && (
+               <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-2 opacity-50">
+                 <MessageSquare className="w-12 h-12" />
+                 <p className="text-sm font-bold">{language === 'ar' ? 'ابدأ المحادثة الآن' : 'Start the conversation now'}</p>
+               </div>
+            )}
+            {chatMessages.map((m, i) => (
               <motion.div 
                 key={i}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${m.senderId === currentUser?.id ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-[80%] space-y-1 ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+                <div className={`max-w-[80%] space-y-1 ${m.senderId === currentUser?.id ? 'items-end' : 'items-start'}`}>
                   <div className={`p-4 rounded-[1.5rem] text-sm font-medium shadow-sm whitespace-pre-wrap ${
-                    m.role === 'user' 
+                    m.senderId === currentUser?.id 
                       ? 'bg-blue-600 text-white rounded-tr-none' 
                       : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
                   }`}>
@@ -612,6 +624,16 @@ export const StudyPlanView: React.FC<Props> = ({ student, onNavigate, language }
     );
   }
 
+  const toggleTask = async (taskId: string) => {
+    if (!plan) return;
+    const updatedTasks = plan.tasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t);
+    const updatedPlan = { ...plan, tasks: updatedTasks };
+    await updateStudent({ ...student, studyPlan: updatedPlan });
+    if (updatedTasks.find(t => t.id === taskId)?.completed) {
+      showToast(language === 'ar' ? 'أحسنت! استمر في التقدم.' : 'Great job! Keep going.');
+    }
+  };
+
   return (
     <div className="pb-24">
       <Header title={t.studyPlan} subtitle={plan.title} onBack={() => onNavigate('dashboard')} />
@@ -630,9 +652,12 @@ export const StudyPlanView: React.FC<Props> = ({ student, onNavigate, language }
               <h4 className="font-black text-slate-800 text-sm tracking-tight">{task.title}</h4>
               <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">{task.type} • {task.duration}</span>
             </div>
-            <button className={`w-10 h-10 rounded-2xl border-2 flex items-center justify-center transition-all ${
-              task.completed ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200' : 'border-slate-100 text-transparent hover:border-blue-200'
-            }`}>
+            <button 
+              onClick={() => toggleTask(task.id)}
+              className={`w-10 h-10 rounded-2xl border-2 flex items-center justify-center transition-all ${
+                task.completed ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200' : 'border-slate-100 text-transparent hover:border-blue-200'
+              }`}
+            >
               <CheckCircle2 className="w-6 h-6" />
             </button>
           </Card>
@@ -762,9 +787,18 @@ export const ProgressDetail: React.FC<Props> = ({ student, onNavigate, language 
 };
 
 export const HelpRequest: React.FC<Props> = ({ student, onNavigate, language }) => {
+  const { currentUser, sendHelpRequest } = useData();
   const [sent, setSent] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [subject, setSubject] = useState(language === 'ar' ? 'الرياضيات' : 'Mathematics');
+  const [message, setMessage] = useState('');
   const t = TRANSLATIONS[language];
+
+  const handleSubmit = async () => {
+    if (!message.trim() || !currentUser) return;
+    await sendHelpRequest(currentUser.id, subject, message, isAnonymous);
+    setSent(true);
+  };
 
   if (sent) {
     return (
@@ -794,7 +828,11 @@ export const HelpRequest: React.FC<Props> = ({ student, onNavigate, language }) 
       <div className="space-y-6">
         <div className="space-y-2">
           <label className="block text-xs font-black text-slate-400 uppercase tracking-widest px-1">{language === 'ar' ? 'ما هي المادة التي تحتاج مساعدة فيها؟' : 'What subject do you need help with?'}</label>
-          <select className="w-full bg-white border border-slate-200 rounded-2xl p-5 text-slate-700 font-bold outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all">
+          <select 
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-2xl p-5 text-slate-700 font-bold outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all"
+          >
             <option>{language === 'ar' ? 'الرياضيات' : 'Mathematics'}</option>
             <option>{language === 'ar' ? 'الفيزياء' : 'Physics'}</option>
             <option>{language === 'ar' ? 'اللغة العربية' : 'Arabic'}</option>
@@ -805,6 +843,8 @@ export const HelpRequest: React.FC<Props> = ({ student, onNavigate, language }) 
         <div className="space-y-2">
           <label className="block text-xs font-black text-slate-400 uppercase tracking-widest px-1">{language === 'ar' ? 'صف ما يدور في ذهنك' : 'Describe what\'s on your mind'}</label>
           <textarea 
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
             className="w-full bg-white border border-slate-200 rounded-2xl p-5 text-slate-700 h-40 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all font-medium resize-none"
             placeholder={language === 'ar' ? "أواجه صعوبة في مفاهيم حساب التفاضل والتكامل الجديدة..." : "I'm struggling with the new Calculus concepts..."}
           />
@@ -813,7 +853,7 @@ export const HelpRequest: React.FC<Props> = ({ student, onNavigate, language }) 
         <div className="flex items-center justify-between p-5 bg-slate-50 rounded-[2rem] border border-slate-100 shadow-inner">
           <div className="flex items-center gap-4">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-sm ${isAnonymous ? 'bg-slate-800 text-white' : 'bg-blue-100 text-blue-600'}`}>
-              <User className="w-6 h-6" />
+              <Users className="w-6 h-6" />
             </div>
             <div>
               <span className="font-black text-slate-800 block tracking-tight">{language === 'ar' ? 'اسأل بدون خوف؟' : 'Ask Without Fear?'}</span>
@@ -829,7 +869,7 @@ export const HelpRequest: React.FC<Props> = ({ student, onNavigate, language }) 
         </div>
 
         <button 
-          onClick={() => setSent(true)}
+          onClick={handleSubmit}
           className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all mt-4"
         >
           {language === 'ar' ? 'إرسال الطلب' : 'Submit Request'}

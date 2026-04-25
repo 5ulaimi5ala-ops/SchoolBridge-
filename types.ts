@@ -7,6 +7,20 @@ export type RiskLevel = 'low' | 'medium' | 'high';
 
 export type Mood = 'happy' | 'neutral' | 'sad' | 'stressed';
 
+export interface Notification {
+  id: string;
+  to: string;
+  title: string;
+  message: string;
+  type: 'invite' | 'alert' | 'update' | 'message' | 'help';
+  timestamp: number;
+  read: boolean;
+  payload?: {
+    screen: string;
+    data?: any;
+  };
+}
+
 export interface User {
   id: string;
   email: string;
@@ -16,6 +30,8 @@ export interface User {
   classId?: string; // For students and teachers
   studentEmail?: string; // For parents, to link to their child
   onboarded?: boolean; // For teachers
+  avatar?: string;
+  bio?: string;
 }
 
 export interface Class {
@@ -46,6 +62,7 @@ export interface Badge {
 
 export interface Student {
   id: string;
+  email: string;
   name: string;
   grade: string;
   riskLevel: RiskLevel;
@@ -67,6 +84,8 @@ export interface Student {
   isPeerMentor: boolean;
   // Study Plan
   studyPlan?: StudyPlan;
+  // Internal Teacher Notes
+  internalNotes?: TeacherNote[];
 }
 
 export interface StudyPlan {
