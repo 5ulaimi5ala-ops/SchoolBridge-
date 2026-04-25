@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LayoutDashboard, Users, BookOpen, Bell, Search, Filter, ArrowRight, UserCheck, AlertTriangle, Heart, MessageCircle, Send, CheckCircle2, ChevronRight, BrainCircuit, Sparkles, Wand2 } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, Bell, Search, Filter, ArrowRight, UserCheck, AlertTriangle, Heart, MessageCircle, Send, CheckCircle2, ChevronRight, BrainCircuit, Sparkles, Wand2, LogOut } from 'lucide-react';
 import { useData } from '../DataContext';
 
 export const TeacherDashboard: React.FC = () => {
-  const { currentUser, classes, messages, helpRequests, resolveHelpRequest, postMessage } = useData();
+  const { currentUser, classes, messages, helpRequests, resolveHelpRequest, postMessage, logout } = useData();
   const [activeTab, setActiveTab] = useState<'overview' | 'classes' | 'struggles' | 'wellbeing'>('overview');
   const [selectedClass, setSelectedClass] = useState(classes[0] || null);
 
@@ -75,7 +75,14 @@ export const TeacherDashboard: React.FC = () => {
           ))}
         </nav>
 
-        <div className="mt-auto pt-8 border-t border-gray-100">
+        <div className="mt-auto pt-8 border-t border-gray-100 flex flex-col gap-6">
+           <button 
+             onClick={logout}
+             className="flex items-center gap-3 p-4 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all w-full"
+           >
+             <LogOut className="w-5 h-5" />
+             <span className="font-bold text-sm">Switch Role</span>
+           </button>
            <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
                 {currentUser?.name[0]}

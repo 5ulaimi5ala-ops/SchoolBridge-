@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useData } from '../DataContext';
-import { Heart, ShieldCheck, Zap, ArrowRight, UserCheck, LayoutDashboard, Search, Bell, AlertTriangle } from 'lucide-react';
+import { Heart, ShieldCheck, Zap, ArrowRight, UserCheck, LayoutDashboard, Search, Bell, AlertTriangle, LogOut } from 'lucide-react';
 
 export const ParentDashboard: React.FC = () => {
-  const { currentUser, classes } = useData();
+  const { currentUser, classes, logout } = useData();
 
   // Find the classes the child is in
   const childClasses = classes.filter(c => c.studentIds.includes(currentUser?.childId || ''));
@@ -18,6 +18,13 @@ export const ParentDashboard: React.FC = () => {
         </div>
         <button className="p-4 bg-rose-50 text-rose-600 rounded-2xl">
           <LayoutDashboard className="w-6 h-6" />
+        </button>
+        <button 
+          onClick={logout}
+          className="mt-auto p-4 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all"
+          title="Switch Role"
+        >
+          <LogOut className="w-6 h-6" />
         </button>
       </div>
 

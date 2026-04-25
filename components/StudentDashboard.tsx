@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LayoutDashboard, MessageSquare, Target, Zap, Bot, Users, BookOpen, Search, ArrowRight, Star, Heart, Mic, HelpCircle } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Target, Zap, Bot, Users, BookOpen, Search, ArrowRight, Star, Heart, Mic, HelpCircle, LogOut } from 'lucide-react';
 import { useData } from '../DataContext';
 import { GamificationCenter } from './GamificationCenter';
 import { FocusMode } from './FocusMode';
 import { EmotionalTrack } from './EmotionalTrack';
 
 export const StudentDashboard: React.FC = () => {
-  const { currentUser, classes, messages, postReply, createHelpRequest } = useData();
+  const { currentUser, classes, messages, postReply, createHelpRequest, logout } = useData();
   const [activeTab, setActiveTab] = useState<'overview' | 'classes' | 'focus' | 'social'>('overview');
   const [selectedClass, setSelectedClass] = useState(classes[0]);
   const [helpMode, setHelpMode] = useState(false);
@@ -52,7 +52,14 @@ export const StudentDashboard: React.FC = () => {
           ))}
         </nav>
 
-        <div className="mt-auto">
+        <div className="mt-auto flex flex-col items-center gap-6">
+          <button 
+            onClick={logout}
+            className="p-4 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all"
+            title="Switch Role"
+          >
+            <LogOut className="w-6 h-6" />
+          </button>
           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-200 to-violet-200 flex items-center justify-center text-indigo-700 font-bold text-xs">
             {currentUser?.name[0]}
           </div>
