@@ -1,136 +1,68 @@
-
-export type Role = 'student' | 'teacher' | 'parent';
-
-export type Language = 'en' | 'ar';
-
-export type RiskLevel = 'low' | 'medium' | 'high';
-
-export type Mood = 'happy' | 'neutral' | 'sad' | 'stressed';
-
-export interface Notification {
-  id: string;
-  to: string;
-  title: string;
-  message: string;
-  type: 'invite' | 'alert' | 'update' | 'message' | 'help';
-  timestamp: number;
-  read: boolean;
-  payload?: {
-    screen: string;
-    data?: any;
-  };
-}
+export type Role = 'teacher' | 'student' | 'parent';
 
 export interface User {
   id: string;
-  email: string;
-  password?: string;
+  name: string;
   role: Role;
-  name: string;
-  classId?: string; // For students and teachers
-  studentEmail?: string; // For parents, to link to their child
-  onboarded?: boolean; // For teachers
-  avatar?: string;
-  bio?: string;
-}
-
-export interface Class {
-  id: string;
-  name: string;
-  teacherId: string;
-  subjects: string[]; // List of subject IDs from OMANI_SUBJECTS
-  students: { email: string, userId?: string }[];
-  parents: { email: string, studentEmail: string, userId?: string }[];
-}
-
-export interface Subject {
-  id: string;
-  name: string;
-  progress: number;
-  score: number;
-  risk: RiskLevel;
-  lastImprovement?: number; 
-}
-
-export interface Badge {
-  id: string;
-  name: string;
-  icon: string;
-  description: string;
-  unlockedAt?: string;
-}
-
-export interface Student {
-  id: string;
-  email: string;
-  name: string;
-  grade: string;
-  riskLevel: RiskLevel;
-  issueSummary: string;
-  attendance: number;
-  missingTasks: string[];
-  recentScores: number[];
-  subjects: Subject[];
-  // Gamification
+  childId?: string; // For parents
   points: number;
-  level: number;
-  badges: Badge[];
-  // Emotional Check-in
-  currentMood?: Mood;
-  moodHistory: { date: string, mood: Mood }[];
-  // Peer Support
-  strengths: string[];
-  weaknesses: string[];
-  isPeerMentor: boolean;
-  // Study Plan
-  studyPlan?: StudyPlan;
-  // Internal Teacher Notes
-  internalNotes?: TeacherNote[];
+  badges: string[];
+  moods: { emoji: string; text: string; timestamp: number }[];
 }
 
-export interface StudyPlan {
+export interface ChatMessage {
   id: string;
-  title: string;
-  tasks: {
-    id: string;
-    title: string;
-    type: 'video' | 'practice' | 'reading';
-    completed: boolean;
-    duration: string;
-  }[];
-}
-
-export interface TeacherNote {
-  id: string;
-  date: string;
+  sender: 'user' | 'ai';
   text: string;
-  category: 'academic' | 'behavioral' | 'emotional';
+  timestamp: number;
+}
+
+export interface AIChatSession {
+  id: string;
+  studentId: string;
+  messages: ChatMessage[];
+  subject?: string;
 }
 
 export interface HelpRequest {
   id: string;
   studentId: string;
-  subject: string;
-  message: string;
-  timestamp: string;
+  studentName: string;
+  classId: string;
+  text?: string;
+  audioUrl?: string;
+  timestamp: number;
   isAnonymous: boolean;
   status: 'pending' | 'resolved';
 }
 
-export interface Message {
+export interface ClassReply {
   id: string;
-  senderId: string;
-  receiverId: string;
+  authorId: string;
+  authorName: string;
   text: string;
-  timestamp: string;
-  isRead: boolean;
+  timestamp: number;
 }
 
-export interface DiscussionQuestion {
+export interface AppMessage {
   id: string;
+  classId: string;
+  senderId: string;
+  senderName: string;
   text: string;
-  authorId?: string; // Optional for anonymous
-  isAnonymous: boolean;
-  timestamp: string;
-  replies: { id: string, text: string, authorName: string, timestamp: string }[];
+  timestamp: number;
+  type: 'announcement' | 'discussion';
+  isPinned: boolean;
+  replies: ClassReply[];
+}
+
+export interface AppClass {
+  id: string;
+  name: string;
+  code: string;
+  teacherId: string;
+  teacherName: string;
+  studentIds: string[];
+  studentNames: string[];
+  subjects: string[];
 }

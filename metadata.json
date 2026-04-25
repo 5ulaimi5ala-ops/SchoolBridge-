@@ -1,6 +1,6 @@
 {
   "name": "SchoolBridge",
-  "description": "A dynamic Omani school platform for teachers, students, and parents. Features guided teacher setup, real-time student dashboards with AI insights, and parent progress tracking.",
+  "description": "SchoolBridge: An AI-powered educational hub with a Student AI Buddy, Gamified XP systems, 'Silent Struggle' detection for teachers, Focus Mode, and emotional check-ins. Bridging the gap between students, teachers, and parents.",
   "requestFramePermissions": [
     "camera",
     "microphone"
