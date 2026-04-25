@@ -26,8 +26,10 @@ import {
 } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { currentUser, students, notifications, logout, isLoggedIn, markNotificationRead, clearNotificationsByType, signInWithGoogle, completeProfile } = useData();
+  const { currentUser, students, notifications, logout, isLoggedIn, markNotificationRead, clearNotificationsByType, loginWithPin, completeProfile } = useData();
   const [role, setRole] = useState<Role | null>(null);
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [pin, setPin] = useState('');
   const [language, setLanguage] = useState<Language>(() => {
     return (localStorage.getItem('sb_lang') as Language) || 'en';
   });
@@ -91,14 +93,16 @@ const App: React.FC = () => {
     }
   };
 
-  const onLogin = async () => {
+  const handlePinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRole || !pin) return;
+    
     setAuthLoading(true);
     setError('');
     try {
-      await signInWithGoogle();
+      await loginWithPin(selectedRole, pin);
     } catch (err: any) {
-      console.error("Auth Error:", err);
-      setError(language === 'ar' ? 'فشل تسجيل الدخول. حاول مرة أخرى.' : 'Login failed. Please try again.');
+      setError(language === 'ar' ? 'الرمز غير صحيح. حاول مرة أخرى.' : 'Incorrect PIN. Please try again.');
     } finally {
       setAuthLoading(false);
     }
@@ -164,25 +168,60 @@ const App: React.FC = () => {
               <Bridge className="w-12 h-12" />
             </div>
             <h1 className="text-3xl font-black text-slate-800 tracking-tight text-center">{t.welcome}</h1>
-            <p className="text-slate-500 text-sm mt-3 text-center">{language === 'ar' ? 'سجل الدخول للوصول إلى SchoolBridge' : 'Sign in to access SchoolBridge'}</p>
+            <p className="text-slate-500 text-sm mt-3 text-center">{isRTL ? 'اختر دورك وسجل الدخول' : 'Select your role and sign in'}</p>
           </div>
 
-          <div className="space-y-4">
-            <button 
-              onClick={onLogin}
-              disabled={authLoading}
-              className="w-full bg-white border border-slate-200 text-slate-700 font-bold py-4 rounded-2xl flex items-center justify-center gap-3 shadow-md active:scale-95 transition-all hover:bg-slate-50 disabled:opacity-50"
-            >
-              <svg className="w-6 h-6" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-1.01.67-2.31 1.05-3.71 1.05-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.67-.35-1.39-.35-2.09s.13-1.42.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335"/>
-              </svg>
-              {authLoading ? (language === 'ar' ? 'جاري التحميل...' : 'Please wait...') : (language === 'ar' ? 'المتابعة باستخدام Google' : 'Continue with Google')}
-            </button>
-            {error && <p className="text-rose-500 text-xs font-bold text-center mt-2">{error}</p>}
-          </div>
+          {!selectedRole ? (
+            <div className="space-y-3">
+              {[
+                { id: 'student', label: t.student, icon: '🎓', color: 'bg-blue-50 text-blue-600' },
+                { id: 'teacher', label: t.teacher, icon: '📝', color: 'bg-emerald-50 text-emerald-600' },
+                { id: 'parent', label: t.parent, icon: '🏠', color: 'bg-amber-50 text-amber-600' },
+              ].map(r => (
+                <button 
+                  key={r.id}
+                  onClick={() => setSelectedRole(r.id as Role)}
+                  className="w-full bg-white border border-slate-100 p-4 rounded-3xl text-left hover:border-blue-200 hover:bg-blue-50/30 transition-all flex items-center gap-4 group shadow-sm"
+                >
+                  <span className={`text-xl w-10 h-10 rounded-2xl flex items-center justify-center ${r.color} group-hover:scale-110 transition-transform`}>{r.icon}</span>
+                  <span className="font-bold text-slate-700">{r.label}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <form onSubmit={handlePinSubmit} className="space-y-4">
+               <div className="flex items-center gap-3 mb-2">
+                 <button type="button" onClick={() => {setSelectedRole(null); setPin(''); setError('');}} className="p-2 bg-slate-100 rounded-full text-slate-600 hover:bg-slate-200 transition-all">
+                   <Home className="w-4 h-4" />
+                 </button>
+                 <span className="text-sm font-black text-slate-500 uppercase tracking-widest">{selectedRole} Access</span>
+               </div>
+               
+               <div className="space-y-1">
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{isRTL ? 'أدخل الرمز' : 'Enter PIN'}</label>
+                 <div className="relative">
+                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                   <input 
+                     required
+                     type="password"
+                     value={pin}
+                     onChange={e => setPin(e.target.value)}
+                     className="w-full bg-slate-100 border border-slate-200 rounded-2xl py-3 pl-11 pr-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-medium tracking-[0.5em]"
+                     placeholder="••••••"
+                   />
+                 </div>
+               </div>
+
+               <button 
+                 type="submit"
+                 disabled={authLoading}
+                 className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-95 transition-all mt-4 disabled:opacity-50"
+               >
+                 {authLoading ? (isRTL ? 'جاري التحقق...' : 'Verifying...') : (isRTL ? 'دخول' : 'Access Dashboard')}
+               </button>
+               {error && <p className="text-rose-500 text-xs font-bold text-center mt-2">{error}</p>}
+            </form>
+          )}
         </div>
       </div>
     );
